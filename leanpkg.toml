@@ -1,0 +1,8 @@
+[package]
+name = "invHypTrig"
+version = "0.1"
+lean_version = "leanprover-community/lean:3.18.4"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "0e5f44b078b085c0bb3a999b6adbe7b8997877ba"}

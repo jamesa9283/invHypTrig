@@ -1,164 +1,100 @@
 /-
 Copyright (c) 2020 James Arthur. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: James Arthur, Chris Hughes, Shing Tak Lam.
+Authors: James Arthur, Chris Hughes, Shing Tak Lam.
 -/
+import analysis.special_functions.trigonometric
 import basic
+
 open real
+local attribute [pp_nodot] real.log
 noncomputable theory
 
 /-!
 # Inverse of the sinh function
 
 In this file we prove that sinh is bijective and hence has an
-inverse, arsinh. 
+inverse, arsinh.
 
 ## Main Results
 
-- `sinm_injective`: The proof that `sinm` is injective
-- `sinm_surjective`: The proof that `sinm` is surjective
-- `sinm_bijective`: The proof `sinm` is bijective
-
-## Notation 
-
-- `arsinh`: The inverse function of `sinm`
+- `sinh_injective`: The proof that `sinh` is injective
+- `sinm_surjective`: The proof that `sinh` is surjective
+- `sinm_bijective`: The proof `sinh` is bijective
+- `arsinh`: The inverse function of `sinh`
 
 ## Tags
 
-arsinh, sinh injective, sinh bijective, sinh surjective
+arsinh, arcsinh, argsinh, asinh, sinh injective, sinh bijective, sinh surjective
 -/
 
-/-- The inverse of the `sinh`-/
-def arsinh (x : ℝ) := log (x + sqrt(1 + x^2)) 
 
+/-- `arsinh` is defined using a logarithm, `arsinh x = log (x + sqrt(1 + x^2))`. -/
+def arsinh (x : ℝ) := log (x + sqrt (1 + x^2))
 
-/-- Proving that `∀ a b, sinh a = sinh b → a = b` -/
+/-- `sinh` is injective, `∀ a b, sinh a = sinh b → a = b`. -/
 lemma sinh_injective : function.injective sinh := sinh_strict_mono.injective
 
-private lemma aux_lemma (x : ℝ) : 1/(x + (1 + x^2).sqrt) = - x + (1 + x^2).sqrt :=
+private lemma aux_lemma (x : ℝ) : 1 / (x + sqrt (1 + x ^ 2)) = -x + sqrt (1 + x ^ 2) :=
 begin
-  have H : (x - (1 + x^2).sqrt)/((x - (1 + x^2).sqrt) * (x + (1 + x^2).sqrt)) = -x + (1 + x^2).sqrt,
-  { have G : (x - (1 + x^2).sqrt) * (x + (1 + x^2).sqrt) = -1,
-    { ring,
-      rw sqr_sqrt,
-      { ring },
-      { linarith [pow_two_nonneg x]} },
-    rw G,
-    ring },
-  rw [division_def, mul_inv', ←mul_assoc, mul_comm (x - sqrt (1 + x ^ 2)), inv_mul_cancel] at H,
-  rw one_mul at H,
-  rw [division_def, one_mul],
-  exact H,
-  { intros fx,
-    rw sub_eq_zero at fx,
-    have fx_sq : x^2 = (sqrt (1 + x ^ 2)) ^ 2 := by { rw fx.symm },
-    rw sqr_sqrt at fx_sq,
-    linarith,
-    have G : 0 ≤ x^2 := by {apply pow_two_nonneg},
-    linarith }
+  refine (eq_one_div_of_mul_eq_one _).symm,
+  have : 0 ≤ 1 + x ^ 2 := add_nonneg zero_le_one (pow_two_nonneg x),
+  rw [add_comm, ← sub_eq_neg_add, ← mul_self_sub_mul_self,
+      mul_self_sqrt this, pow_two, add_sub_cancel]
 end
 
-private lemma b_lt_sqrt_b_sq_add_one (b : ℝ) : b < sqrt(b^2 + 1) :=
-begin
-  by_cases hb : 0 ≤ b,
-  conv { to_lhs, rw ← sqrt_sqr hb },
-  rw sqrt_lt,
-  linarith,
-  apply pow_two_nonneg,
-  have F : 0 ≤ b^2 := by { apply pow_two_nonneg },
-  linarith,
-  rw not_le at hb,
-  apply lt_of_lt_of_le hb,
-  apply sqrt_nonneg,
-end
+private lemma b_lt_sqrt_b_one_add_sq (b : ℝ) : b < sqrt (1 + b ^ 2) :=
+calc  b
+    ≤ sqrt (b ^ 2)     : le_sqrt_of_sqr_le $ le_refl _
+... < sqrt (1 + b ^ 2) : (sqrt_lt (pow_two_nonneg _) (add_nonneg zero_le_one (pow_two_nonneg _))).2
+  (lt_one_add _)
 
-/-- Proving `∀ b, ∃ a, sinh a = b`. In this case, we use `a = arsinh b` -/
-lemma sinh_surjective : function.surjective sinh :=
-begin
-  intro b,
-  use (arsinh b),
-  rw sinh_def,
-  unfold arsinh,
-  rw ←log_inv,
-  rw [exp_log, exp_log],
-  { rw [← one_mul ((b + sqrt (1 + b ^ 2))⁻¹), ←division_def, aux_lemma],
-    ring },
-  { rw [← one_mul ((b + sqrt (1 + b ^ 2))⁻¹), ←division_def, aux_lemma],
-    ring,
-    rw [neg_add_eq_sub, sub_pos],
-    have H : b^2 < sqrt (b ^ 2 + 1)^2,
-    { rw sqr_sqrt,
-      linarith,
-      have F : 0 ≤ b^2 := by {apply pow_two_nonneg},
-      linarith },
-    exact b_lt_sqrt_b_sq_add_one b,
-  },
-  { have H := b_lt_sqrt_b_sq_add_one (-b),
-    rw [neg_square, add_comm (b^2)] at H,
-    linarith },
-end
+private lemma add_sqrt_one_add_pow_two_pos (b : ℝ) : 0 < b + sqrt (1 + b ^ 2) :=
+by { rw [← neg_neg b, ← sub_eq_neg_add, sub_pos, pow_two, neg_mul_neg, ← pow_two],
+  exact b_lt_sqrt_b_one_add_sq (-b) }
 
-/-- Proving that `sinh` is both injective and surjective-/
-lemma sinh_bijective : function.bijective sinh := 
+/-- `arsinh` is the right inverse of `sinh`. -/
+lemma sinh_arsinh (x : ℝ) : sinh (arsinh x) = x :=
+by rw [sinh_eq, arsinh, ← log_inv, exp_log (add_sqrt_one_add_pow_two_pos x),
+      exp_log (inv_pos.2 (add_sqrt_one_add_pow_two_pos x)),
+      inv_eq_one_div, aux_lemma x, sub_eq_add_neg, neg_add, neg_neg, ← sub_eq_add_neg,
+      add_add_sub_cancel, add_self_div_two]
+
+/-- `sinh` is surjective, `∀ b, ∃ a, sinh a = b`. In this case, we use `a = arsinh b`. -/
+lemma sinh_surjective : function.surjective sinh := function.left_inverse.surjective sinh_arsinh
+
+/-- `sinh` is bijective, both injective and surjective. -/
+lemma sinh_bijective : function.bijective sinh :=
 ⟨sinh_injective, sinh_surjective⟩
 
-/-- A real version of `complex.cosh_sq_sub_sinh_sq`-/
-lemma real.cosh_sq_sub_sinh_sq (x : ℝ) : cosh x ^ 2 - sinh x ^ 2 = 1 :=
-begin
-  rw [sinh, cosh],
-  have := complex.cosh_sq_sub_sinh_sq x,
-  apply_fun complex.re at this,
-  rw [pow_two, pow_two] at this,
-  change (⟨_, _⟩ : ℂ).re - (⟨_, _⟩ : ℂ).re = 1 at this,
-  rw [complex.cosh_of_real_im x, complex.sinh_of_real_im x] at this,
-  norm_num at this,
-  rwa [pow_two, pow_two],
-end
-
-/-- A rearrangment and `sqrt` of `real.cosh_sq_sub_sinh_sq` -/
-lemma sqrt_one_add_sinh_sq (x : ℝ): sqrt (1 + sinh x ^ 2) = cosh x := 
+/-- A rearrangment and `sqrt` of `real.cosh_sq_sub_sinh_sq`. -/
+lemma sqrt_one_add_sinh_sq (x : ℝ): sqrt (1 + sinh x ^ 2) = cosh x :=
 begin
   have H := real.cosh_sq_sub_sinh_sq x,
-  have G : cosh x ^ 2 - sinh x ^ 2 + sinh x ^ 2 = 1 + sinh x ^ 2 := by {rw H},
-  ring at G,
-  rw add_comm at G,
-  rw [G.symm, sqrt_sqr],
+  have G : cosh x ^ 2 - sinh x ^ 2 + sinh x ^ 2 = 1 + sinh x ^ 2 := by rw H,
+  rw sub_add_cancel at G,
+  rw [←G, sqrt_sqr],
   exact le_of_lt (cosh_pos x),
 end
 
-/-- Proving that `arsinh` is a left inverse of `sinh` -/
-lemma sinh_arsinh (x : ℝ) : arsinh (sinh x) = x :=
+/-- `arsinh` is the left inverse of `sinh`. -/
+lemma arsinh_sinh (x : ℝ) : arsinh (sinh x) = x :=
+function.right_inverse_of_injective_of_left_inverse sinh_injective sinh_arsinh x
+
+--------  NEW STUFF  -----------
+
+lemma arsinh_eq (x : ℝ) : arsinh x = log (x + sqrt(1 + x^2)) := rfl
+
+lemma arsinh_zero : arsinh 0 = 0 := by {rw arsinh_eq, norm_num}
+
+lemma cosh_arsinh (x : ℝ) : cosh (arsinh x) = sqrt (1 + x ^ 2) :=
+by rw [← sqrt_one_add_sinh_sq (arsinh x), sinh_arsinh]
+
+lemma arsinh_add_arsinh (x y : ℝ) : arsinh x + arsinh y = arsinh (x * sqrt(1 + y^2) + y * sqrt(1 + x^2)) :=
 begin
-  unfold arsinh,
-  rw sinh_def,
-  apply exp_injective,
-  rw exp_log,
-  { rw [← sinh_def, sqrt_one_add_sinh_sq, cosh_def, sinh_def],
-    ring },
-  { rw [← sinh_def, sqrt_one_add_sinh_sq, cosh_def, sinh_def],
-    ring,
-    exact exp_pos x },
+  apply sinh_injective,
+  rw sinh_add,
+  simp only [sinh_arsinh, cosh_arsinh],
+  rw mul_comm y,
 end
 
-lemma arsinh_sinh (x : ℝ) : sinh (arsinh x) = x :=
-begin
-  rw sinh_def,
-  unfold arsinh,
-  rw ←log_inv,
-  rw [exp_log, exp_log],
-  { rw [← one_mul ((x + sqrt (1 + x ^ 2))⁻¹), ←division_def, aux_lemma],
-    ring },
-  { rw [← one_mul ((x + sqrt (1 + x ^ 2))⁻¹), ←division_def, aux_lemma],
-    ring,
-    rw [neg_add_eq_sub, sub_pos],
-    have H : x^2 < sqrt (x ^ 2 + 1)^2,
-    { rw sqr_sqrt,
-      linarith,
-      have F : 0 ≤ x^2 := by {apply pow_two_nonneg},
-      linarith },
-    exact b_lt_sqrt_b_sq_add_one x,
-  },
-  { have H := b_lt_sqrt_b_sq_add_one (-x),
-    rw [neg_square, add_comm (x^2)] at H,
-    linarith },
-end
