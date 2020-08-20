@@ -1,10 +1,11 @@
 import analysis.special_functions.trigonometric data.real.basic analysis.special_functions.pow
+import tactic
 
 variables (x : ℝ)
 open real
 noncomputable theory
 
-local attribute [pp_nodot] real.log
+attribute [pp_nodot] real.log
 
 lemma cosh_eq (x : ℝ) : cosh x = (exp x + exp (-x)) / 2 :=
 eq_div_of_mul_eq two_ne_zero $ by rw [cosh, exp, exp, complex.of_real_neg, complex.cosh, mul_two,
@@ -33,6 +34,8 @@ end
 lemma cosh_pos (x : ℝ) : 0 < real.cosh x :=
 (cosh_eq x).symm ▸ half_pos (add_pos (exp_pos x) (exp_pos (-x)))
 
+lemma cosh_nonneg (x : ℝ) : 0 ≤ real.cosh x := le_of_lt (cosh_pos x)
+
 lemma sinh_strict_mono : strict_mono sinh :=
 strict_mono_of_deriv_pos differentiable_sinh (by rw [real.deriv_sinh]; exact cosh_pos)
 
@@ -40,3 +43,12 @@ strict_mono_of_deriv_pos differentiable_sinh (by rw [real.deriv_sinh]; exact cos
 
 @[simp] lemma cosh_neg : cosh (-x) = cosh x :=
 by simp [add_comm, cosh, exp_neg]
+
+lemma sinh_nonneg (h : 0 ≤ x) : 0 ≤ sinh x :=
+begin
+  rw sinh_eq,
+  apply div_nonneg,
+  { rw [le_sub_iff_add_le, zero_add, exp_le_exp],
+    linarith},
+  { norm_num},
+end
